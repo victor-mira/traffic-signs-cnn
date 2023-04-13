@@ -1,59 +1,54 @@
-from tensorflow import keras
-from tensorflow import losses
+import matplotlib.pyplot as plt
 
-data_dir = 'traffic_Data/DATA'
+from loader import Loader
+from model import OriginalModel
+from pretrain_model import PretrainedModel
 
-batch_size = 32
-img_height = 180
-img_width = 180
+nb_test = 5
 
-train_ds = keras.utils.image_dataset_from_directory(
-    data_dir,
-    subset='training',
-    validation_split=0.2,
-    seed=667,
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
+loader = Loader(data_dir='traffic_Data/DATA', batch_size=32, img_height=180, img_width=180, train_split=0.8,
+                val_split=0.1, ds_size=4170)
+loader.load_for_train()
 
-test_ds = keras.utils.image_dataset_from_directory(
-    data_dir,
-    subset='validation',
-    validation_split=0.2,
-    seed=667,
-    image_size=(img_height, img_width),
-    batch_size=batch_size)
+for i in range(nb_test):
+    original_model = OriginalModel(loader)
+    history = original_model.train_model()
 
+    print(history.history.keys())
+    # summarize history for accuracy
+    plt.plot(history.history['accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('original_model_accuracies_' + str(i))
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('original_model_losses_' + str(i))
+    plt.show()
 
-class_names = train_ds.class_names
-print(class_names)
+    original_model.save_model('original_model_' + str(i))
 
-num_classes = len(class_names) + 1
-
-
-model = keras.Sequential([
-    keras.layers.Rescaling(1. / 255),
-    keras.layers.Conv2D(32, 3, activation='relu'),
-    keras.layers.Dropout(.2),
-    keras.layers.Conv2D(32, 3, activation='relu'),
-    keras.layers.MaxPooling2D(),
-    keras.layers.Conv2D(32, 3, activation='relu'),
-    keras.layers.Dropout(.2),
-    keras.layers.Conv2D(32, 3, activation='relu'),
-    keras.layers.MaxPooling2D(),
-    keras.layers.Flatten(),
-    keras.layers.Dense(128, activation='relu'),
-    keras.layers.Dense(num_classes, activation='softmax')
-])
-
-model.compile(
-  optimizer='adam',
-  loss=losses.SparseCategoricalCrossentropy(from_logits=True),
-  metrics=['accuracy'])
-
-model.fit(
-  train_ds,
-  validation_data=test_ds,
-  epochs=5
-)
-
-model.save('model1')
+    pretrained_model = PretrainedModel(loader)
+    history = pretrained_model.model_train()
+    pretrained_model.save("pretrain_model_" + str(i))
+    plt.plot(history.history['accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('pretrained_model_accuracies_' + str(i))
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.savefig('pretrained_model_losses_' + str(i))
+    plt.show()
